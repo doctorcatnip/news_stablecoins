@@ -13,10 +13,6 @@ async function main() {
   console.log('Initializing database...');
   initDB();
 
-  // Perform an initial news fetch on startup
-  console.log('Running initial news fetch...');
-  await fetchAllNews().catch((err) => console.error('Initial fetch failed:', err));
-
   // Prepare Next.js
   const app = next({ dev, port });
   const handle = app.getRequestHandler();
@@ -31,6 +27,10 @@ async function main() {
     console.log(`\n> StableCoin News is running on http://localhost:${port}`);
     console.log(`> Environment: ${dev ? 'development' : 'production'}`);
     console.log(`> News updates scheduled at 08:00 and 20:00 JST (Asia/Tokyo)\n`);
+
+    // Fetch news in the background after server is ready
+    console.log('Running initial news fetch in background...');
+    fetchAllNews().catch((err) => console.error('Initial fetch failed:', err));
   });
 
   // Schedule news fetching: 08:00 JST and 20:00 JST
