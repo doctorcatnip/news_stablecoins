@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import NewsCard from './NewsCard';
 import { NewsArticle } from '@/lib/db';
 
-const CATEGORIES = ['all', 'Stablecoins', 'Payments', 'Payment Gateways', 'X402', 'General'];
+const CATEGORIES = ['all', 'Stablecoins', 'Payments', 'Payment Gateways', 'X402', 'Agentic Payments', 'General'];
 
 interface NewsResponse {
   articles: NewsArticle[];
@@ -23,7 +23,7 @@ export default function NewsFeed() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`/api/news?category=${encodeURIComponent(cat)}&limit=60`);
+      const res = await fetch(`/api/news?category=${encodeURIComponent(cat)}&limit=10`);
       if (!res.ok) throw new Error('Failed to load news');
       const json = await res.json();
       setData(json);
@@ -68,7 +68,7 @@ export default function NewsFeed() {
         <div>
           <h1 className="text-2xl font-bold text-[#e6edf3]">Crypto News</h1>
           <p className="text-sm text-[#8b949e] mt-1">
-            Stablecoins · X402 · Payments · Crypto Gateways
+            Stablecoins · X402 · Payments · Agentic Payments · Daily Top 10
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -117,9 +117,9 @@ export default function NewsFeed() {
             {cat === 'all' ? 'All Topics' : cat}
           </button>
         ))}
-        {!loading && (
+        {!loading && data.articles.length > 0 && (
           <span className="shrink-0 ml-auto text-xs text-[#6e7681]">
-            {data.total} articles
+            Top {data.articles.length} most relevant
           </span>
         )}
       </div>

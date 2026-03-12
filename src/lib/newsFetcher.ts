@@ -24,7 +24,42 @@ const KEYWORDS = [
   'crypto remittance', 'crypto transfer',
   'web3 payment', 'defi payment',
   'lightning network payment', 'cross-border payment crypto',
+  // Agentic payment keywords
+  'agentic payment', 'agentic payments', 'ai agent payment',
+  'autonomous payment', 'agent payment', 'ai payment',
 ];
+
+// Weighted keyword groups for relevance scoring
+const WEIGHTED_KEYWORDS: Array<{ keywords: string[]; weight: number }> = [
+  // Highest priority — niche/specific topics
+  { keywords: ['x402'], weight: 10 },
+  { keywords: ['agentic payment', 'agentic payments', 'ai agent payment', 'autonomous payment', 'agent payment'], weight: 10 },
+  // High priority — specific stablecoin payment use cases
+  { keywords: ['stablecoin payment', 'stablecoin use case', 'stablecoin adoption', 'stablecoin-based'], weight: 8 },
+  { keywords: ['payment gateway', 'payment gateways', 'crypto gateway'], weight: 6 },
+  { keywords: ['web3 payment', 'defi payment', 'on-chain payment', 'onchain payment'], weight: 6 },
+  // Medium priority — core stablecoin terms
+  { keywords: ['stablecoin', 'stablecoins', 'stable coin', 'stable coins'], weight: 4 },
+  { keywords: ['usdc', 'usdt', 'dai', 'pyusd', 'tusd', 'usdd', 'frax'], weight: 4 },
+  { keywords: ['crypto payment', 'crypto payments', 'cryptocurrency payment'], weight: 4 },
+  { keywords: ['cbdc', 'digital dollar'], weight: 3 },
+  { keywords: ['payment rail', 'payment rails', 'cross-border payment'], weight: 3 },
+  // Lower priority — broader terms
+  { keywords: ['circle', 'tether', 'paxos'], weight: 2 },
+  { keywords: ['crypto remittance', 'crypto transfer'], weight: 2 },
+];
+
+// Source authority bonus points
+const SOURCE_BONUS: Record<string, number> = {
+  'CoinDesk Stablecoins': 5,
+  'CoinTelegraph Stablecoins': 5,
+  'CoinTelegraph Payments': 4,
+  'CoinDesk': 3,
+  'Blockworks': 3,
+  'The Block': 3,
+  'CoinTelegraph': 2,
+  'Decrypt': 2,
+};
 
 // Crypto & finance news RSS sources
 const RSS_SOURCES = [
@@ -54,9 +89,37 @@ function isRelevant(title: string, description: string = ''): boolean {
   return KEYWORDS.some((kw) => text.includes(kw.toLowerCase()));
 }
 
+function computeRelevanceScore(title: string, description: string, source: string): number {
+  const titleLower = title.toLowerCase();
+  const bodyLower = description.toLowerCase();
+  let score = 0;
+
+  for (const { keywords, weight } of WEIGHTED_KEYWORDS) {
+    for (const kw of keywords) {
+      if (titleLower.includes(kw)) {
+        score += weight * 2; // Title match counts double
+      } else if (bodyLower.includes(kw)) {
+        score += weight;
+      }
+    }
+  }
+
+  // Add source authority bonus
+  score += SOURCE_BONUS[source] ?? 1;
+  return score;
+}
+
 function classifyCategory(title: string, description: string = ''): string {
   const text = (title + ' ' + description).toLowerCase();
   if (text.includes('x402')) return 'X402';
+  if (
+    text.includes('agentic payment') ||
+    text.includes('agentic payments') ||
+    text.includes('ai agent payment') ||
+    text.includes('autonomous payment') ||
+    text.includes('agent payment')
+  )
+    return 'Agentic Payments';
   if (
     text.includes('payment gateway') ||
     text.includes('payment gateways') ||
@@ -114,8 +177,8 @@ export async function fetchAllNews(): Promise<FetchResult[]> {
   const db = getDB();
 
   const insert = db.prepare(`
-    INSERT OR IGNORE INTO news_articles (title, summary, url, source, published_at, category)
-    VALUES (?, ?, ?, ?, ?, ?)
+    INSERT OR IGNORE INTO news_articles (title, summary, url, source, published_at, category, relevance_score)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
   `);
 
   const logFetch = db.prepare(`
@@ -151,7 +214,8 @@ export async function fetchAllNews(): Promise<FetchResult[]> {
         }
 
         const category = classifyCategory(title, summary);
-        const stmt = insert.run(title, summary, url, source.name, pubDate, category);
+        const relevanceScore = computeRelevanceScore(title, summary, source.name);
+        const stmt = insert.run(title, summary, url, source.name, pubDate, category, relevanceScore);
         if (stmt.changes > 0) {
           result.added++;
           totalAdded++;

@@ -26,7 +26,7 @@ async function main() {
   server.listen(port, () => {
     console.log(`\n> StableCoin News is running on http://localhost:${port}`);
     console.log(`> Environment: ${dev ? 'development' : 'production'}`);
-    console.log(`> News updates scheduled at 08:00 and 20:00 JST (Asia/Tokyo)\n`);
+    console.log(`> News updates scheduled daily at 08:00 JST (Asia/Tokyo)\n`);
 
     // Fetch news in the background after server is ready
     console.log('Running initial news fetch in background...');
@@ -44,16 +44,7 @@ async function main() {
     { timezone: 'Asia/Tokyo' }
   );
 
-  cron.schedule(
-    '0 20 * * *',
-    async () => {
-      console.log('\n[CRON] 20:00 JST — Fetching latest news...');
-      await fetchAllNews().catch((err) => console.error('[CRON] Fetch error:', err));
-    },
-    { timezone: 'Asia/Tokyo' }
-  );
-
-  console.log('Cron jobs scheduled. Server is ready.\n');
+  console.log('Cron job scheduled. Server is ready.\n');
 }
 
 main().catch((err) => {

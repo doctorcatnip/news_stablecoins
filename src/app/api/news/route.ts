@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const category = searchParams.get('category') ?? 'all';
-    const limit = Math.min(parseInt(searchParams.get('limit') ?? '50'), 100);
+    const limit = Math.min(parseInt(searchParams.get('limit') ?? '10'), 100);
     const offset = parseInt(searchParams.get('offset') ?? '0');
 
     const db = getDB();
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     if (category === 'all') {
       query = `
         SELECT * FROM news_articles
-        ORDER BY published_at DESC
+        ORDER BY relevance_score DESC, published_at DESC
         LIMIT ? OFFSET ?
       `;
       params = [limit, offset];
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
       query = `
         SELECT * FROM news_articles
         WHERE category = ?
-        ORDER BY published_at DESC
+        ORDER BY relevance_score DESC, published_at DESC
         LIMIT ? OFFSET ?
       `;
       params = [category, limit, offset];

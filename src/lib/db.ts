@@ -16,6 +16,7 @@ export interface NewsArticle {
   source: string;
   published_at: string;
   category: string;
+  relevance_score: number;
   created_at: string;
 }
 
@@ -51,6 +52,7 @@ function initSchema(db: Database.Database): void {
       source      TEXT NOT NULL,
       published_at TEXT NOT NULL,
       category    TEXT DEFAULT 'General',
+      relevance_score INTEGER DEFAULT 0,
       created_at  TEXT DEFAULT (datetime('now'))
     );
 
@@ -69,8 +71,16 @@ function initSchema(db: Database.Database): void {
 
     CREATE INDEX IF NOT EXISTS idx_news_published   ON news_articles(published_at DESC);
     CREATE INDEX IF NOT EXISTS idx_news_category    ON news_articles(category);
+    CREATE INDEX IF NOT EXISTS idx_news_relevance   ON news_articles(relevance_score DESC);
     CREATE INDEX IF NOT EXISTS idx_chat_created     ON chat_messages(id DESC);
   `);
+
+  // Migration: add relevance_score column to existing databases that don't have it
+  const cols = db.prepare(`PRAGMA table_info(news_articles)`).all() as { name: string }[];
+  if (!cols.some((c) => c.name === 'relevance_score')) {
+    db.exec(`ALTER TABLE news_articles ADD COLUMN relevance_score INTEGER DEFAULT 0`);
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_news_relevance ON news_articles(relevance_score DESC)`);
+  }
 }
 
 export function initDB(): void {
