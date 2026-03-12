@@ -29,7 +29,7 @@ export interface ChatMessage {
 
 export function getDB(): Database.Database {
   if (!global.__db) {
-    const dbDir = path.join(process.cwd(), 'data');
+    const dbDir = process.env.DATA_DIR ?? path.join(process.cwd(), 'data');
     if (!fs.existsSync(dbDir)) {
       fs.mkdirSync(dbDir, { recursive: true });
     }

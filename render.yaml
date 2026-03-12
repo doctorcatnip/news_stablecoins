@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: news-stablecoins
+    runtime: node
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATA_DIR
+        value: /data
+    disk:
+      name: news-data
+      mountPath: /data
+      sizeGB: 1
