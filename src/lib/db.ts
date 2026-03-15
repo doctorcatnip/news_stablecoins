@@ -26,6 +26,15 @@ export interface ChatMessage {
   created_at: string;
 }
 
+export interface TelegramSubscription {
+  id: number;
+  chat_id: number;
+  username: string | null;
+  topics: string; // JSON array of topic keys
+  active: number; // 1 = active, 0 = paused
+  created_at: string;
+}
+
 export function getDB(): Database.Database {
   if (!global.__db) {
     const dbDir = path.join(process.cwd(), 'data');
@@ -67,9 +76,19 @@ function initSchema(db: Database.Database): void {
       articles_added INTEGER DEFAULT 0
     );
 
+    CREATE TABLE IF NOT EXISTS telegram_subscriptions (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      chat_id     INTEGER UNIQUE NOT NULL,
+      username    TEXT,
+      topics      TEXT DEFAULT '["Stablecoins","Payments"]',
+      active      INTEGER DEFAULT 1,
+      created_at  TEXT DEFAULT (datetime('now'))
+    );
+
     CREATE INDEX IF NOT EXISTS idx_news_published   ON news_articles(published_at DESC);
     CREATE INDEX IF NOT EXISTS idx_news_category    ON news_articles(category);
     CREATE INDEX IF NOT EXISTS idx_chat_created     ON chat_messages(id DESC);
+    CREATE INDEX IF NOT EXISTS idx_tg_active        ON telegram_subscriptions(active);
   `);
 }
 

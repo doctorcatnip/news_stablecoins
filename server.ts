@@ -4,6 +4,7 @@ import next from 'next';
 import cron from 'node-cron';
 import { initDB } from './src/lib/db';
 import { fetchAllNews } from './src/lib/newsFetcher';
+import { createBot, broadcastDigest } from './src/lib/telegramBot';
 
 const dev = process.env.NODE_ENV !== 'production';
 const port = parseInt(process.env.PORT ?? '3000', 10);
@@ -12,6 +13,21 @@ async function main() {
   // Initialize the SQLite database
   console.log('Initializing database...');
   initDB();
+
+  // ── Telegram Bot ───────────────────────────────────────────────────────────
+  const telegramToken = process.env.TELEGRAM_BOT_TOKEN;
+  if (telegramToken) {
+    const bot = createBot(telegramToken);
+    bot.launch().then(() => {
+      console.log('> Telegram bot is running (long-polling)');
+    }).catch((err) => console.error('[TelegramBot] Launch error:', err));
+
+    // Graceful shutdown
+    process.once('SIGINT', () => bot.stop('SIGINT'));
+    process.once('SIGTERM', () => bot.stop('SIGTERM'));
+  } else {
+    console.warn('> TELEGRAM_BOT_TOKEN not set — Telegram bot disabled');
+  }
 
   // Prepare Next.js
   const app = next({ dev, port });
@@ -34,12 +50,15 @@ async function main() {
   });
 
   // Schedule news fetching: 08:00 JST and 20:00 JST
-  // node-cron timezone option handles the JST conversion automatically
   cron.schedule(
     '0 8 * * *',
     async () => {
       console.log('\n[CRON] 08:00 JST — Fetching latest news...');
       await fetchAllNews().catch((err) => console.error('[CRON] Fetch error:', err));
+      if (telegramToken) {
+        console.log('[CRON] Broadcasting digest to Telegram subscribers...');
+        await broadcastDigest().catch((err) => console.error('[CRON] Broadcast error:', err));
+      }
     },
     { timezone: 'Asia/Tokyo' }
   );
@@ -49,6 +68,10 @@ async function main() {
     async () => {
       console.log('\n[CRON] 20:00 JST — Fetching latest news...');
       await fetchAllNews().catch((err) => console.error('[CRON] Fetch error:', err));
+      if (telegramToken) {
+        console.log('[CRON] Broadcasting digest to Telegram subscribers...');
+        await broadcastDigest().catch((err) => console.error('[CRON] Broadcast error:', err));
+      }
     },
     { timezone: 'Asia/Tokyo' }
   );
